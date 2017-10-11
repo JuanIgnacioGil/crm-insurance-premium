@@ -7,6 +7,7 @@ import numpy as np
 import plotly.graph_objs as go
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import f1_score
 
 
 def analyze_feature(var, db1, db1_train, db1_test, categorical=False):
@@ -70,8 +71,8 @@ def logistic_floating(var, db1, db1_train, db1_test):
     lr.fit(db1.loc[db1_train, var].as_matrix().reshape(-1, 1),
            db1.loc[db1_train, 'Sales'].as_matrix())
 
-    score = lr.score(db1.loc[db1_test, var].as_matrix().reshape(-1, 1),
-                     db1.loc[db1_test, 'Sales'].as_matrix())
+    predicted = lr.predict(db1.loc[db1_test, var].as_matrix().reshape(-1, 1))
+    score = f1_score(db1.loc[db1_test, 'Sales'].as_matrix(), predicted)
 
     return score
 
@@ -93,9 +94,10 @@ def logistic_categorical(var, db1, db1_train, db1_test):
     X_train = X.loc[db1_train].as_matrix()
     X_test = X.loc[db1_test].as_matrix()
 
-    lr = LogisticRegression()
+    lr = LogisticRegression(fit_intercept=False)
     lr.fit(X_train, db1.loc[db1_train, 'Sales'].as_matrix())
 
-    score = lr.score(X_test, db1.loc[db1_test, 'Sales'].as_matrix())
+    predicted = lr.predict(X_test)
+    score = f1_score(db1.loc[db1_test, 'Sales'].as_matrix(), predicted)
 
     return score
