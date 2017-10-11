@@ -25,7 +25,10 @@ def analyze_feature(var, db1, db1_train, db1_test, categorical=False):
     """
 
     # Logistic regression
-    score = logistic_floating(var, db1, db1_train, db1_test)
+    if categorical:
+        score = logistic_categorical(var, db1, db1_train, db1_test)
+    else:
+        score = logistic_floating(var, db1, db1_train, db1_test)
 
     # Bar plot
     g = db1[['Sales', var]].groupby(var)
@@ -42,7 +45,9 @@ def analyze_feature(var, db1, db1_train, db1_test, categorical=False):
             visible=True)
     )]
 
-    layout = go.Layout(barmode='group', title='{}. Score {}'.format(var, score))
+    layout = go.Layout(barmode='group', title='{}. Score {}'.format(var, score),
+                       yaxis=dict(title='Probability of sales'),
+                        xaxis = dict(title=var))
     fig = go.Figure(data=dp, layout=layout)
 
     return score, fig
@@ -85,14 +90,12 @@ def logistic_categorical(var, db1, db1_train, db1_test):
         fig (plotly.graph_objs.Figure): plotly figure to be plot in a Jupyter notebook
     """
     X = pd.get_dummies(db1[var])
-    X_train = X[db1_train].as_matrix()
-    X_test = X[db1_test].as_matrix()
+    X_train = X.loc[db1_train].as_matrix()
+    X_test = X.loc[db1_test].as_matrix()
 
     lr = LogisticRegression()
-    lr.fit(db1.loc[db1_train, var].as_matrix().reshape(-1, 1),
-           db1.loc[db1_train, 'Sales'].as_matrix())
+    lr.fit(X_train, db1.loc[db1_train, 'Sales'].as_matrix())
 
-    score = lr.score(db1.loc[db1_test, var].as_matrix().reshape(-1, 1),
-                     db1.loc[db1_test, 'Sales'].as_matrix())
+    score = lr.score(X_test, db1.loc[db1_test, 'Sales'].as_matrix())
 
     return score
