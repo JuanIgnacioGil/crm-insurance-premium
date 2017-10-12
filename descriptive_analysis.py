@@ -27,31 +27,48 @@ def analyze_feature(var, db1, categorical=False):
 
     # Logistic regression
     if categorical:
-        score = logistic_categorical(var, db1)
+        chi, pval = logistic_categorical(var, db1)
     else:
-        score = logistic_floating(var, db1)
+        chi, pval = logistic_floating(var, db1)
 
     # Bar plot
+    sales_average = db1['Sales'].mean()
     g = db1[['Sales', var]].groupby(var)
-    data = pd.concat([g.mean(), np.sqrt((g.mean() * (1 - g.mean())) / g.count()), g.count()], axis=1)
-    data.columns = ['Sales probability', 'standard error', 'Number of clients']
+    data = pd.concat([g.mean(), np.sqrt((g.mean() * (1 - g.mean())) / g.count()),
+                      100 * g.count() / g.count().sum()], axis=1)
+    data.columns = ['Sales probability', 'standard error', 'Percentage of clients']
 
-    dp = [go.Bar(
-        x=data.index,
-        y=data['Sales probability'],
-        name='Sales probability',
-        error_y=dict(
-            type='data',
-            array=data['standard error'],
-            visible=True)
-    )]
+    dp = [
+        # Chart
+        go.Bar(
+            x=data.index,
+            y=data['Sales probability'],
+            text=['{:.0f}% of clients'.format(x) for x in data['Percentage of clients']],
+            name='Sales probability',
+            error_y=dict(
+                type='data',
+                array=data['standard error'],
+                visible=False)
+        ),
 
-    layout = go.Layout(barmode='group', title='{}. p-value: {}'.format(var, score),
-                       yaxis=dict(title='Probability of sales'),
-                        xaxis = dict(title=var))
+        go.Scatter(
+            x=[data.index[0], data.index[-1]],
+            y=[sales_average, sales_average],
+            mode='lines',
+            name='Average: {:.3f}'.format(sales_average),
+        )
+    ]
+
+    layout = go.Layout(
+        barmode='group',
+        title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(var, chi, pval),
+        yaxis=dict(title='Probability of sales'),
+        xaxis=dict(title=var),
+    )
+
     fig = go.Figure(data=dp, layout=layout)
 
-    return score, fig
+    return chi, pval, fig
 
 
 def logistic_floating(var, db1):
@@ -85,8 +102,44 @@ def logistic_categorical(var, db1):
         score (float): Score of the logistic regression
         fig (plotly.graph_objs.Figure): plotly figure to be plot in a Jupyter notebook
     """
-    X = pd.get_dummies(db1[var], dummy_na=True).as_matrix()
+
+    le = LabelEncoder()
+    X = le.fit_transform(db1[var]).reshape(-1, 1)
 
     c, pval = chi2(X, db1['Sales'].as_matrix())
 
-    return c, pval
+    return c[0], pval[0]
+
+
+def analyze_output(var, db1):
+
+    """Analyzes an output feature:
+
+    Args:
+        var (str): Feature name
+        db1 (pandas.DataFrame): data
+
+    Returns:
+
+        fig (plotly.graph_objs.Figure): plotly figure to be plot in a Jupyter notebook
+    """
+
+    # Histogram
+
+    dp = [
+        # Chart
+        go.Histogram(
+            x=db1[var],
+            name=var,
+        ),
+    ]
+
+    layout = go.Layout(
+        barmode='group',
+        yaxis=dict(title='Number of clients'),
+        xaxis=dict(title=var),
+    )
+
+    fig = go.Figure(data=dp, layout=layout)
+
+    return fig
