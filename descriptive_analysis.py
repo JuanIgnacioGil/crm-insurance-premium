@@ -10,7 +10,7 @@ from sklearn.feature_selection import chi2
 from sklearn.preprocessing import LabelEncoder
 
 
-def analyze_feature(var, db1, categorical=False, continous=False):
+def analyze_feature(var, db1, categorical=False, continous=False, nbins=10):
 
     """Analyzes a feature, draws a plot, and performs a chi square test
 
@@ -21,6 +21,7 @@ def analyze_feature(var, db1, categorical=False, continous=False):
         db1_test (pandas.Index): indexes of the test set
         categorical (bool): True if the data is categorical (defaults to False)
         continous (bool): True if the data is continous (defaults to False)
+        nbins (int): For continuous variables, number of bins
 
     Returns:
         chi (float): chi-square
@@ -33,7 +34,7 @@ def analyze_feature(var, db1, categorical=False, continous=False):
 
     # If the data is continous, cut it in buckets
     if continous:
-        bins = db1[var].quantile([0, 1/3, 2/3, 1])
+        bins = db1[var].quantile(np.linspace(0, 1, num=nbins))
         db1['binned'] = pd.cut(db1[var], bins=bins, include_lowest=True)
         var = 'binned'
         categorical = True
