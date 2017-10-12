@@ -10,7 +10,7 @@ from sklearn.feature_selection import chi2
 from sklearn.preprocessing import LabelEncoder
 
 
-def analyze_feature(var, db1, categorical=False):
+def analyze_feature(var, db1, categorical=False, continous=False):
 
     """Analyzes a feature, draws a plot, and performs a chi square test
 
@@ -19,6 +19,8 @@ def analyze_feature(var, db1, categorical=False):
         db1 (pandas.DataFrame): data
         db1_train (pandas.Index): indexes of the train set
         db1_test (pandas.Index): indexes of the test set
+        categorical (bool): True if the data is categorical (defaults to False)
+        continous (bool): True if the data is continous (defaults to False)
 
     Returns:
         chi (float): chi-square
@@ -26,17 +28,27 @@ def analyze_feature(var, db1, categorical=False):
         fig (plotly.graph_objs.Figure): plotly figure to be plot in a Jupyter notebook
     """
 
-    # Logistic regression
+    title = var
+    sales_average = db1['Sales'].mean()
+
+    # If the data is continous, cut it in buckets
+    if continous:
+        bins = db1[var].quantile([0, 1/3, 2/3, 1])
+        db1['binned'] = pd.cut(db1[var], bins=bins, include_lowest=True)
+        var = 'binned'
+        categorical = True
+
+    # Chi square test
     if categorical:
         chi, pval = chi2_categorical(var, db1)
     else:
         chi, pval = chi2_floating(var, db1)
 
     # Bar plot
-    sales_average = db1['Sales'].mean()
     g = db1[['Sales', var]].groupby(var)
     data = pd.concat([g.mean(), np.sqrt((g.mean() * (1 - g.mean())) / g.count()),
                       100 * g.count() / g.count().sum()], axis=1)
+
     data.columns = ['Sales probability', 'standard error', 'Percentage of clients']
 
     dp = [
@@ -62,9 +74,9 @@ def analyze_feature(var, db1, categorical=False):
 
     layout = go.Layout(
         barmode='group',
-        title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(var, chi, pval),
+        title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(title, chi, pval),
         yaxis=dict(title='Probability of sales'),
-        xaxis=dict(title=var),
+        xaxis=dict(title=title),
     )
 
     fig = go.Figure(data=dp, layout=layout)
@@ -145,62 +157,3 @@ def analyze_output(var, db1):
     fig = go.Figure(data=dp, layout=layout)
 
     return fig
-
-
-def analyze_geo_feature(var, db1, categorical=False):
-
-    """Analyzes a geographical feature, draws a Choropleth map, and returns the chi-square and p-value:
-
-    Args:
-        var (str): Feature name
-        db1 (pandas.DataFrame): data
-        db1_train (pandas.Index): indexes of the train set
-        db1_test (pandas.Index): indexes of the test set
-
-    Returns:
-        score (float): Score of the logistic regression
-        fig (plotly.graph_objs.Figure): plotly figure to be plot in a Jupyter notebook
-    """
-
-    scl = [[0.0, 'rgb(242,240,247)'], [0.2, 'rgb(218,218,235)'], [0.4, 'rgb(188,189,220)'], \
-           [0.6, 'rgb(158,154,200)'], [0.8, 'rgb(117,107,177)'], [1.0, 'rgb(84,39,143)']]
-
-    # Chi square and p-value
-    if categorical:
-        chi, pval = chi2_categorical(var, db1)
-    else:
-        chi, pval = chi2_floating(var, db1)
-
-    # Bar plot
-    sales_average = db1['Sales'].mean()
-    g = db1[['Sales', var]].groupby(var)
-    data = pd.concat([g.mean(), np.sqrt((g.mean() * (1 - g.mean())) / g.count()),
-                      100 * g.count() / g.count().sum()], axis=1)
-    data.columns = ['Sales probability', 'standard error', 'Percentage of clients']
-
-    dp = [dict(
-        type='choropleth',
-        colorscale=scl,
-        autocolorscale=False,
-        locations=data.index,
-        z=data['Sales probability'].astype(float),
-        locationmode='Spain',
-        marker=dict(
-            line=dict(
-                color='rgb(255,255,255)',
-                width=2
-            )),
-        colorbar=dict(
-            title="Sales probability")
-    )]
-
-    layout = go.Layout(
-        barmode='group',
-        title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(var, chi, pval),
-        yaxis=dict(title='Probability of sales'),
-        xaxis=dict(title=var),
-    )
-
-    fig = go.Figure(data=dp, layout=layout)
-
-    return chi, pval, fig
