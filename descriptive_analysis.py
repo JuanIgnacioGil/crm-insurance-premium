@@ -10,7 +10,7 @@ from sklearn.feature_selection import chi2
 from sklearn.preprocessing import LabelEncoder
 
 
-def analyze_feature(var, db1, categorical=False, continous=False, nbins=10):
+def analyze_feature(var, db1, categorical=False, continous=False):
 
     """Analyzes a feature, draws a plot, and performs a chi square test
 
@@ -21,7 +21,6 @@ def analyze_feature(var, db1, categorical=False, continous=False, nbins=10):
         db1_test (pandas.Index): indexes of the test set
         categorical (bool): True if the data is categorical (defaults to False)
         continous (bool): True if the data is continous (defaults to False)
-        nbins (int): For continuous variables, number of bins
 
     Returns:
         chi (float): chi-square
@@ -34,7 +33,7 @@ def analyze_feature(var, db1, categorical=False, continous=False, nbins=10):
 
     # If the data is continous, cut it in buckets
     if continous:
-        bins = db1[var].quantile(np.linspace(0, 1, num=nbins))
+        bins = sorted(list(set(db1[var].quantile(np.linspace(0, 1, num=6)))))
         db1['binned'] = pd.cut(db1[var], bins=bins, include_lowest=True)
         var = 'binned'
         categorical = True
@@ -76,7 +75,7 @@ def analyze_feature(var, db1, categorical=False, continous=False, nbins=10):
     layout = go.Layout(
         barmode='group',
         title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(title, chi, pval),
-        yaxis=dict(title='Probability of sales'),
+        yaxis=dict(title='Probability of sales', range=[0, 1]),
         xaxis=dict(title=title),
     )
 
