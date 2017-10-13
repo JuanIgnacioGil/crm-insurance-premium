@@ -59,7 +59,7 @@ def predict_data(premium, model, X):
 
 if __name__ == "__main__":
     model, X = load_predict_data()
-    for premium in range(50):
+    for premium in range(11, 23):
         expected_income, expected_semesters_paid, expected_sales, y = predict_data(premium, model, X)
         print(premium, expected_income, expected_semesters_paid, expected_sales)
 

@@ -11,9 +11,7 @@ from sklearn.externals import joblib
 
 
 # Features to use
-features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'Tenure', 'Socieconomic Status',
-            'Price Sensitivity', 'Right Address', 'PhoneType','Premium Offered', 'Estimated number of cars',
-            'Living Area (m^2)', 'Number of Fixed Lines', 'yearBuilt', 'Credit', 'Probability of Second Residence']
+not_features = ['Obs', 'Sales', 'CodeCategory', 'Product Type', 'Number of Semesters Paid', 'Phone Call Day']
 
 def prepare_data():
     """Prepare data for analysis
@@ -39,6 +37,7 @@ def prepare_data():
     db2['Premium Offered'] = db1['Premium Offered'].mean()
 
     # To get all columns in X, we need to mix it with the training data
+    features = [x for x in db1.columns if x not in not_features]
     db3 = pd.concat([db1[features], db2[features]], axis=0)
 
     # Generate an X matrix
@@ -76,7 +75,26 @@ def proccess_X(db):
 
     # 'Price Sensitivity'
     var = 'Price Sensitivity'
-    db1.loc[np.isnan(db1[var]), var] = 13
+    db1.loc[np.isnan(db1[var]), var] = 7
+    X[var] = db1[var].copy()
+
+    # 'PhoneType'
+    var = 'PhoneType'
+    #dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
+    X[var] = db1[var].copy()
+
+    # Email
+    var = 'Email'
+    X[var] = db1[var].copy()
+
+    # Tenure
+    var = 'Tenure'
+    X[var] = db1[var].copy()
+
+    # NumberofCampaigns
+    var = 'NumberofCampaigns'
     X[var] = db1[var].copy()
 
     # ProdActive
@@ -87,12 +105,11 @@ def proccess_X(db):
     var = 'ProdBought'
     X[var] = db1[var].copy()
 
-    # NumberofCampaigns
-    var = 'NumberofCampaigns'
-    X[var] = db1[var].copy()
-
-    # Email
-    var = 'Email'
+    # Socieconomic Status
+    var = 'Socieconomic Status'
+    db1.loc[pd.isnull(db1[var]), var] = 'Unknown'
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
     X[var] = db1[var].copy()
 
     # Province
@@ -102,52 +119,21 @@ def proccess_X(db):
     db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
     X[var] = db1[var].copy()
 
-    # TenureYears
-    var = 'TenureYears'
-    db1[var] = 2013 - db1['Tenure']
-    X[var] = db1[var].copy()
-
-    # Socieconomic Status
-    var = 'Socieconomic Status'
-    db1.loc[pd.isnull(db1[var]), var] = 0
-    db1.loc[db1[var] == 'Low', var] = 1
-    db1.loc[db1[var] == 'Medium', var] = 2
-    db1.loc[db1[var] == 'High', var] = 3
-    db1.loc[db1[var] == 'Very High', var] = 4
-    X[var] = db1[var].copy()
-
     # 'Right Address'
     var = 'Right Address'
-    db1.loc[pd.isnull(db1[var]), var] = 'Wrong'
-    #dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
+    db1.loc[pd.isnull(db1[var]), var] = 'Unknown'
     le = LabelEncoder()
     db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
-    X[var] = db1[var].copy()
-
-    # 'PhoneType'
-    var = 'PhoneType'
-    #dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
-    le = LabelEncoder()
-    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
-    X[var] = db1[var].copy()
-
-    # 'Estimated number of cars'
-    var = 'Estimated number of cars'
-    db1.loc[pd.isnull(db1[var]), var] = 0
-    db1.loc[db1[var] == 'None', var] = 0
-    db1.loc[db1[var] == 'One', var] = 1
-    db1.loc[db1[var] == 'two', var] = 2
-    db1.loc[db1[var] == 'Three', var] = 3
     X[var] = db1[var].copy()
 
     # 'Living Area (m^2)'
     var = 'Living Area (m^2)'
-    db1.loc[pd.isnull(db1[var]), var] = 0
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
     X[var] = db1[var].copy()
 
-    # 'Number of Fixed Lines'
-    var = 'Number of Fixed Lines'
-    db1.loc[pd.isnull(db1[var]), var] = 0
+    # 'House Price'
+    var = 'House Price'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
     X[var] = db1[var].copy()
 
     # 'yearBuilt'
@@ -155,17 +141,65 @@ def proccess_X(db):
     db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
     X[var] = db1[var].copy()
 
-    # 'Credit'
-    var = 'Credit'
-    db1.loc[pd.isnull(db1[var]), var] = 0
+    # 'House Insurance'
+    var = 'House Insurance'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # 'Pension Plan'
+    var = 'Pension Plan'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # 'Estimated number of cars'
+    var = 'Estimated number of cars'
+    db1.loc[pd.isnull(db1[var]), var] = 'Unknown'
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
     X[var] = db1[var].copy()
 
     # 'Probability of Second Residence'
     var = 'Probability of Second Residence'
-    db1.loc[pd.isnull(db1[var]), var] = 0
-    db1.loc[db1[var] == 'Low', var] = 0
-    db1.loc[db1[var] == 'Medium', var] = 1
-    db1.loc[db1[var] == 'High', var] = 2
+    db1.loc[pd.isnull(db1[var]), var] = 'Unknown'
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
+    X[var] = db1[var].copy()
+
+    # 'Credit'
+    var = 'Credit'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # 'Savings'
+    var = 'Savings'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # 'Number of Mobile Phones'
+    var = 'Number of Mobile Phones'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # 'Number of Fixed Lines'
+    var = 'Number of Fixed Lines'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # ADSL
+    var = 'ADSL'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    # '3G Devices'
+    var = '3G Devices'
+    db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
+    X[var] = db1[var].copy()
+
+    ## 'Type of House'
+    var = 'Type of House'
+    db1.loc[pd.isnull(db1[var]), var] = 'Unknown'
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
     X[var] = db1[var].copy()
 
     # Convert X to matrix
