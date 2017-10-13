@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """Predictive model"""
 
+import pickle
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from keras.models import Sequential
+from keras.layers import Dense, Activation, Dropout
 
 # Features to use
 features = ['Number of Semesters Paid', 'ProdActive', 'ProdBought', 'Email', 'Province', 'Socieconomic Status',
@@ -139,9 +142,50 @@ def prepare_data():
     # Train and test sets
     X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.2, random_state=42)
 
+    # Pickle the data
+    data = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'scaler': scaler}
+    pickle.dump(data, open('ml_data.dat', 'wb'))
+
     return X_train, X_test, y_train, y_test, scaler
+
+
+def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=None):
+
+    """Predict sales with a neural network
+
+    Args:
+        X_train (numpy.matrix) : X train
+        X_test (numpy.matrix) : X train
+        y_train (np.matrix): train y
+        y_test (np.matrix): test y
+        file (str) : path of a pickle file with data. If exists, overrules all the other inputs
+    Returns:
+        model:
+    """
+
+    if file is not None:
+        # Load tha data
+        data = pickle.load(open('ml_data.dat', 'rb'))
+        X_train = data['X_train']
+        X_test = data['X_test']
+        y_train = data['y_train']
+        y_test = data['y_test']
+
+    model = Sequential()
+    model.add(Dense(40, activation='relu', input_dim=46))
+    model.add(Dropout(0.5))
+    model.add(Dense(30, activation='relu'))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
+
+    # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
+    model.fit(X_train, y_train, epochs=200, batch_size=128, validation_split=0.2, verbose=1)
+    model.test_on_batch(X_test, y_test, sample_weight=None)
+
+    return model
 
 
 if __name__ == "__main__":
     X_train, X_test, y_train, y_test, scaler = prepare_data()
-    print(X_train)
+    model = neural_network(file=r'ml_data.dat')
