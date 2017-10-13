@@ -31,6 +31,7 @@ def prepare_data():
     db1 = xls.parse(1)
 
     X = proccess_X(db1)
+    db1.loc[np.isnan(db1['Number of Semesters Paid']), 'Number of Semesters Paid'] = 0
     y = db1.loc[:, 'Number of Semesters Paid'].as_matrix()
 
     # Normalize X
@@ -58,11 +59,6 @@ def proccess_X(db1):
     """
 
     X = pd.DataFrame()
-
-    # Number of Semesters Paid
-    var = 'Number of Semesters Paid'
-    db1.loc[np.isnan(db1[var]), var] = 0
-    X[var] = db1[var].copy()
 
     # ProdActive
     var = 'ProdActive'
@@ -186,7 +182,7 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_test = data['y_test']
 
     model = Sequential()
-    model.add(Dense(32, activation='relu', input_dim=56))
+    model.add(Dense(32, activation='relu', input_dim=55))
     model.add(Dropout(0.5))
     model.add(Dense(16, activation='relu'))
     model.add(Dropout(0.5))
