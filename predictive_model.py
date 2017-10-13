@@ -140,7 +140,7 @@ def prepare_data():
     Xnorm = scaler.fit_transform(X)
 
     # Train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.15, random_state=42)
 
     # Pickle the data
     data = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'scaler': scaler}
@@ -172,20 +172,38 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_test = data['y_test']
 
     model = Sequential()
-    model.add(Dense(40, activation='relu', input_dim=46))
+    model.add(Dense(32, activation='relu', use_bias=False, input_dim=55))
     model.add(Dropout(0.5))
-    model.add(Dense(30, activation='relu'))
+    model.add(Dense(16, activation='relu', use_bias=False))
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Dense(8, activation='relu', use_bias=False))
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid', use_bias=False))
     model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
 
     # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
-    model.fit(X_train, y_train, epochs=200, batch_size=128, validation_split=0.2, verbose=1)
-    model.test_on_batch(X_test, y_test, sample_weight=None)
+    model.fit(X_train, y_train, epochs=100, batch_size=128, validation_split=0.15, verbose=1)
+
+    # Test on the test set
+    test_accuracy = model.test_on_batch(X_test, y_test, sample_weight=None)
+    print('Test crossentropy: {:.3f}'.format(test_accuracy[0]))
+    print('Test accuracy: {:.3f}'.format(test_accuracy[1]))
+
+    # Save model
+    # serialize model to JSON
+    model_json = model.to_json()
+    with open('model.json', 'w') as json_file:
+        json_file.write(model_json)
+    # serialize weights to HDF5
+    model.save_weights('model.h5')
+    print('Saved model to disk')
 
     return model
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test, scaler = prepare_data()
-    model = neural_network(file=r'ml_data.dat')
+    #X_train, X_test, y_train, y_test, scaler = prepare_data()
+    # model = neural_network(file=r'ml_data.dat')
+    xls = pd.ExcelFile('Database.xlsx')
+    db2 = xls.parse(2)
+    print(db2.columns)
