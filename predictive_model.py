@@ -16,7 +16,6 @@ features = ['Number of Semesters Paid', 'ProdActive', 'ProdBought', 'Email', 'Pr
             'Number of Fixed Lines']
 
 def prepare_data():
-
     """Prepare data for analysis
 
     Args:
@@ -31,10 +30,33 @@ def prepare_data():
     # Read data
     xls = pd.ExcelFile('Database.xlsx')
     db1 = xls.parse(1)
-    db2 = xls.parse(2)
 
-    # Matrix y
+    X = proccess_X(db1)
     y = db1.loc[:, 'Sales'].as_matrix()
+
+    # Normalize X
+    scaler = StandardScaler()
+    Xnorm = scaler.fit_transform(X)
+
+    # Train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.15, random_state=42)
+
+    # Pickle the data
+    data = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'scaler': scaler}
+    pickle.dump(data, open('ml_data.dat', 'wb'))
+
+    return X_train, X_test, y_train, y_test, scaler
+
+
+def proccess_X(db1):
+    """Create X matrix (common for train and test data)
+
+    Args:
+        db1 (pandas.DataFrame)
+
+    Returns:
+        Xmat (np.matrix): X
+    """
 
     X = pd.DataFrame()
 
@@ -133,20 +155,10 @@ def prepare_data():
     X[var] = db1[var].copy()
 
     # Convert X to matrix
-    X = X.as_matrix()
+    Xmat = X.as_matrix()
 
-    # Normalize X
-    scaler = StandardScaler()
-    Xnorm = scaler.fit_transform(X)
+    return Xmat
 
-    # Train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.15, random_state=42)
-
-    # Pickle the data
-    data = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'scaler': scaler}
-    pickle.dump(data, open('ml_data.dat', 'wb'))
-
-    return X_train, X_test, y_train, y_test, scaler
 
 
 def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=None):
@@ -202,8 +214,5 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
 
 
 if __name__ == "__main__":
-    #X_train, X_test, y_train, y_test, scaler = prepare_data()
-    # model = neural_network(file=r'ml_data.dat')
-    xls = pd.ExcelFile('Database.xlsx')
-    db2 = xls.parse(2)
-    print(db2.columns)
+    X_train, X_test, y_train, y_test, scaler = prepare_data()
+    model = neural_network(file=r'ml_data.dat')
