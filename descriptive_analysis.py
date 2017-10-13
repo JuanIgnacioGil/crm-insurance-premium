@@ -29,7 +29,7 @@ def analyze_feature(var, db1, categorical=False, continous=False):
     """
 
     title = var
-    sales_average = db1['Sales'].mean()
+    sales_average = db1['Number of Semesters Paid'].mean()
 
     # If the data is continous, cut it in buckets
     if continous:
@@ -45,17 +45,16 @@ def analyze_feature(var, db1, categorical=False, continous=False):
         chi, pval = chi2_floating(var, db1)
 
     # Bar plot
-    g = db1[['Sales', var]].groupby(var)
-    data = pd.concat([g.mean(), np.sqrt((g.mean() * (1 - g.mean())) / g.count()),
-                      100 * g.count() / g.count().sum()], axis=1)
+    g = db1[['Number of Semesters Paid', var]].groupby(var)
+    data = pd.concat([g.mean(), g.std(), 100 * g.count() / g.count().sum()], axis=1)
 
-    data.columns = ['Sales probability', 'standard error', 'Percentage of clients']
+    data.columns = ['Number of Semesters Paid', 'standard error', 'Percentage of clients']
 
     dp = [
         # Chart
         go.Bar(
             x=data.index,
-            y=data['Sales probability'],
+            y=data['Number of Semesters Paid'],
             text=['{:.0f}% of clients'.format(x) for x in data['Percentage of clients']],
             name='Sales probability',
             error_y=dict(
@@ -75,7 +74,7 @@ def analyze_feature(var, db1, categorical=False, continous=False):
     layout = go.Layout(
         barmode='group',
         title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(title, chi, pval),
-        yaxis=dict(title='Probability of sales', range=[0, 1]),
+        yaxis=dict(title='Number of Semesters Paid', range=[0, 5]),
         xaxis=dict(title=title),
     )
 
@@ -98,7 +97,10 @@ def chi2_floating(var, db1):
         pval (float): p-value
     """
 
-    c, pval = chi2(db1[var].as_matrix().reshape(-1, 1), db1['Sales'].as_matrix())
+    ley = LabelEncoder()
+    y = ley.fit_transform(db1['Number of Semesters Paid'])
+
+    c, pval = chi2(db1[var].as_matrix().reshape(-1, 1), y)
 
     return c[0], pval[0]
 
@@ -117,10 +119,13 @@ def chi2_categorical(var, db1):
         pval (float): p-value
     """
 
-    le = LabelEncoder()
-    X = le.fit_transform(db1[var]).reshape(-1, 1)
+    leX = LabelEncoder()
+    X = leX.fit_transform(db1[var]).reshape(-1, 1)
 
-    c, pval = chi2(X, db1['Sales'].as_matrix())
+    ley = LabelEncoder()
+    y = ley.fit_transform(db1['Number of Semesters Paid'])
+
+    c, pval = chi2(X, y)
 
     return c[0], pval[0]
 

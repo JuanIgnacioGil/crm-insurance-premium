@@ -10,10 +10,9 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 
 # Features to use
-features = ['Number of Semesters Paid', 'ProdActive', 'ProdBought', 'Email', 'Province', 'Socieconomic Status',
-            'TenureYears', 'NumberofCampaigns', 'Price Sensitivity', 'Right Address', 'PhoneType',
-            'Estimated number of cars', 'Premium Offered', 'Living Area (m^2)', 'yearBuilt', 'Credit',
-            'Number of Fixed Lines']
+features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'TenureYears', 'Socieconomic Status',
+            'Price Sensitivity', 'Right Address', 'PhoneType','Premium Offered', 'Estimated number of cars',
+            'Living Area (m^2)', 'Number of Fixed Lines', 'yearBuilt', 'Credit', 'Probability of Second Residence']
 
 def prepare_data():
     """Prepare data for analysis
@@ -32,7 +31,7 @@ def prepare_data():
     db1 = xls.parse(1)
 
     X = proccess_X(db1)
-    y = db1.loc[:, 'Sales'].as_matrix()
+    y = db1.loc[:, 'Number of Semesters Paid'].as_matrix()
 
     # Normalize X
     scaler = StandardScaler()
@@ -69,13 +68,12 @@ def proccess_X(db1):
     var = 'ProdActive'
     X[var] = db1[var].copy()
 
-    # Price Sensitivity
-    var = 'Price Sensitivity'
-    db1.loc[np.isnan(db1[var]), var] = 7
-    X[var] = db1[var].copy()
-
     # ProdBought
     var = 'ProdBought'
+    X[var] = db1[var].copy()
+
+    # NumberofCampaigns
+    var = 'NumberofCampaigns'
     X[var] = db1[var].copy()
 
     # Email
@@ -87,6 +85,11 @@ def proccess_X(db1):
     dummies = pd.get_dummies(db1[var], dummy_na=True)
     X = pd.concat([X, dummies], axis=1)
 
+    # TenureYears
+    var = 'TenureYears'
+    db1[var] = 2013 - db1['Tenure']
+    X[var] = db1[var].copy()
+
     # Socieconomic Status
     var = 'Socieconomic Status'
     db1.loc[pd.isnull(db1[var]), var] = 0
@@ -94,15 +97,6 @@ def proccess_X(db1):
     db1.loc[db1[var] == 'Medium', var] = 2
     db1.loc[db1[var] == 'High', var] = 3
     db1.loc[db1[var] == 'Very High', var] = 4
-    X[var] = db1[var].copy()
-
-    # TenureYears
-    var = 'TenureYears'
-    db1[var] = 2013 - db1['Tenure']
-    X[var] = db1[var].copy()
-
-    # NumberofCampaigns
-    var = 'NumberofCampaigns'
     X[var] = db1[var].copy()
 
     # 'Price Sensitivity'
@@ -121,6 +115,10 @@ def proccess_X(db1):
     dummies = pd.get_dummies(db1[var], dummy_na=True)
     X = pd.concat([X, dummies], axis=1)
 
+    # 'Premium Offered'
+    var = 'Premium Offered'
+    X[var] = db1[var].copy()
+
     # 'Estimated number of cars'
     var = 'Estimated number of cars'
     db1.loc[pd.isnull(db1[var]), var] = 0
@@ -130,12 +128,13 @@ def proccess_X(db1):
     db1.loc[db1[var] == 'Three', var] = 3
     X[var] = db1[var].copy()
 
-    # 'Premium Offered'
-    var = 'Premium Offered'
-    X[var] = db1[var].copy()
-
     # 'Living Area (m^2)'
     var = 'Living Area (m^2)'
+    db1.loc[pd.isnull(db1[var]), var] = 0
+    X[var] = db1[var].copy()
+
+    # 'Number of Fixed Lines'
+    var = 'Number of Fixed Lines'
     db1.loc[pd.isnull(db1[var]), var] = 0
     X[var] = db1[var].copy()
 
@@ -149,9 +148,12 @@ def proccess_X(db1):
     db1.loc[pd.isnull(db1[var]), var] = 0
     X[var] = db1[var].copy()
 
-    # 'Number of Fixed Lines'
-    var = 'Number of Fixed Lines'
+    # 'Probability of Second Residence'
+    var = 'Probability of Second Residence'
     db1.loc[pd.isnull(db1[var]), var] = 0
+    db1.loc[db1[var] == 'Low', var] = 0
+    db1.loc[db1[var] == 'Medium', var] = 1
+    db1.loc[db1[var] == 'High', var] = 2
     X[var] = db1[var].copy()
 
     # Convert X to matrix
@@ -184,22 +186,22 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_test = data['y_test']
 
     model = Sequential()
-    model.add(Dense(32, activation='relu', use_bias=False, input_dim=55))
+    model.add(Dense(32, activation='relu', input_dim=56))
     model.add(Dropout(0.5))
-    model.add(Dense(16, activation='relu', use_bias=False))
+    model.add(Dense(16, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(8, activation='relu', use_bias=False))
+    model.add(Dense(8, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid', use_bias=False))
-    model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['accuracy'])
+    model.add(Dense(1, activation='relu'))
+    model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['mae'])
 
     # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
     model.fit(X_train, y_train, epochs=100, batch_size=128, validation_split=0.15, verbose=1)
 
     # Test on the test set
     test_accuracy = model.test_on_batch(X_test, y_test, sample_weight=None)
-    print('Test crossentropy: {:.3f}'.format(test_accuracy[0]))
-    print('Test accuracy: {:.3f}'.format(test_accuracy[1]))
+    print('Test mean squared error: {:.3f}'.format(test_accuracy[0]))
+    print('Test mean absolute arror: {:.3f}'.format(test_accuracy[1]))
 
     # Save model
     # serialize model to JSON
