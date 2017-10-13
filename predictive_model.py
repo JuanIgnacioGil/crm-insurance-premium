@@ -4,11 +4,11 @@
 import pickle
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout, LeakyReLU
-from keras.regularizers import l1, l2
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.externals import joblib
+
 
 # Features to use
 features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'Tenure', 'Socieconomic Status',
@@ -30,48 +30,43 @@ def prepare_data():
     # Read data
     xls = pd.ExcelFile('Database.xlsx')
     db1 = xls.parse(1)
+    db2 = xls.parse(2)
 
-    X = proccess_X(db1)
     db1.loc[np.isnan(db1['Number of Semesters Paid']), 'Number of Semesters Paid'] = 0
     y = db1.loc[:, 'Number of Semesters Paid'].as_matrix()
 
-    # Normalize X
-    scaler = StandardScaler()
-    Xnorm = scaler.fit_transform(X)
-
-    # Train and test sets
-    X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.15, random_state=42)
-
-    #db2
-    db2 = xls.parse(2)
-
-    # Fill the premium column
+    # Fill the premium column in db2
     db2['Premium Offered'] = db1['Premium Offered'].mean()
 
     # To get all columns in X, we need to mix it with the training data
-    db3 = pd.concat([db2[features], db1[features]], axis=0)
+    db3 = pd.concat([db1[features], db2[features]], axis=0)
 
     # Generate an X matrix
     Xall = proccess_X(db3)
-    X2 = Xall[:db2.shape[0], :]
+    X = Xall[:db1.shape[0], :]
+    X2 = Xall[db1.shape[0]:, :]
+
+    # Train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
 
     # Pickle the data
-    data = {'X1': X, 'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test,
-            'scaler': scaler, 'X2': X2}
+    data = {'X1': X, 'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'X2': X2}
     pickle.dump(data, open('ml_data.dat', 'wb'))
 
-    return X_train, X_test, y_train, y_test, scaler
+    return X_train, X_test, y_train, y_test
 
 
-def proccess_X(db1):
+def proccess_X(db):
     """Create X matrix (common for train and test data)
 
     Args:
-        db1 (pandas.DataFrame)
+        db (pandas.DataFrame)
 
     Returns:
         Xmat (np.matrix): X
     """
+
+    db1 = db.copy()
 
     X = pd.DataFrame()
 
@@ -81,11 +76,8 @@ def proccess_X(db1):
 
     # 'Price Sensitivity'
     var = 'Price Sensitivity'
-    db1.loc[np.isnan(db1[var]), var] = 12
+    db1.loc[np.isnan(db1[var]), var] = 13
     X[var] = db1[var].copy()
-
-    var = 'PricePremium'
-    X[var] = np.exp(-db1['Price Sensitivity'].copy() * db1['Premium Offered'].copy())
 
     # ProdActive
     var = 'ProdActive'
@@ -105,8 +97,10 @@ def proccess_X(db1):
 
     # Province
     var = 'Province'
-    dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
-    X = pd.concat([X, dummies], axis=1)
+    db1.loc[pd.isnull(db1[var]), var] = 'Unknown'
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
+    X[var] = db1[var].copy()
 
     # TenureYears
     var = 'TenureYears'
@@ -125,13 +119,17 @@ def proccess_X(db1):
     # 'Right Address'
     var = 'Right Address'
     db1.loc[pd.isnull(db1[var]), var] = 'Wrong'
-    dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
-    X = pd.concat([X, dummies], axis=1)
+    #dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
+    X[var] = db1[var].copy()
 
     # 'PhoneType'
     var = 'PhoneType'
-    dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
-    X = pd.concat([X, dummies], axis=1)
+    #dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
+    le = LabelEncoder()
+    db1[var] = le.fit_transform(db1[var]).reshape(-1, 1)
+    X[var] = db1[var].copy()
 
     # 'Estimated number of cars'
     var = 'Estimated number of cars'
@@ -176,10 +174,9 @@ def proccess_X(db1):
     return Xmat
 
 
+def random_forest(X_train=None, X_test=None, y_train=None, y_test=None, file=None):
 
-def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=None):
-
-    """Predict sales with a neural network
+    """Predict sales with a random forest
 
     Args:
         X_train (numpy.matrix) : X train
@@ -199,34 +196,23 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_train = data['y_train']
         y_test = data['y_test']
 
-    model = Sequential()
-    model.add(Dense(32, activation='relu', input_dim=56, use_bias=False, kernel_regularizer=l2(0.01)))
-    model.add(Dense(16, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
-    model.add(Dense(8, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
-    model.add(Dense(4, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
-    model.add(Dense(1, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
-    model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['mae'])
+    model = RandomForestRegressor(n_estimators=100, max_features=0.5, n_jobs=4, verbose=1)
 
-    # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
-    model.fit(X_train, y_train, epochs=50, batch_size=128, validation_split=0.15, verbose=1)
+    print("Training...")
+    # Your model is trained on the training_data
+    model.fit(X_train, y_train)
 
     # Test on the test set
-    test_accuracy = model.test_on_batch(X_test, y_test, sample_weight=None)
-    print('Test mean squared error: {:.3f}'.format(test_accuracy[0]))
-    print('Test mean absolute arror: {:.3f}'.format(test_accuracy[1]))
+    y_pred = model.predict(X_test)
+    accuracy = np.mean((y_pred - y_test)**2)
+    print('Test mean squared error: {:.3f}'.format(accuracy))
 
     # Save model
-    # serialize model to JSON
-    model_json = model.to_json()
-    with open('model.json', 'w') as json_file:
-        json_file.write(model_json)
-    # serialize weights to HDF5
-    model.save_weights('model.h5')
-    print('Saved model to disk')
+    joblib.dump(model, 'random_forest.pkl')
 
     return model
 
 
 if __name__ == "__main__":
-    X_train, X_test, y_train, y_test, scaler = prepare_data()
-    model = neural_network(file=r'ml_data.dat')
+    X_train, X_test, y_train, y_test = prepare_data()
+    model = random_forest(file=r'ml_data.dat')

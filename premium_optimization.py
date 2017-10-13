@@ -3,6 +3,7 @@
 
 import numpy as np
 import pickle
+from sklearn.externals import joblib
 from keras.models import model_from_json
 
 
@@ -20,21 +21,14 @@ def load_predict_data():
 
     # Read the model
     data = pickle.load(open('ml_data.dat', 'rb'))
-    scaler = data['scaler']
     X = data['X1']
 
-    # load json and create model
-    json_file = open('model.json', 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
-    model = model_from_json(loaded_model_json)
-    # load weights into new model
-    model.load_weights('model.h5')
+    model = joblib.load('random_forest.pkl')
 
-    return model, scaler, X
+    return model, X
 
 
-def predict_data(premium, model, scaler, X):
+def predict_data(premium, model, X):
     """Predicts sales for a specified output
 
     Args:
@@ -52,24 +46,21 @@ def predict_data(premium, model, scaler, X):
     # Fill the premium column
     X[:, 0] = premium
 
-    # Fill the pricePremium column
-    X[:, 2] = np.exp(-X[:, 0] * X[:, 1])
-
     # Predict X data
-    Xnorm = scaler.transform(X)
-    y = model.predict(Xnorm)
+    y = model.predict(X)
+    y[y < 0] = 0
 
     expected_semesters_paid = y.mean()
     expected_sales = sum(y > 0.5) / len(y)
     expected_income = premium * expected_semesters_paid
 
-    return expected_income, expected_semesters_paid, expected_sales[0], y
+    return expected_income, expected_semesters_paid, expected_sales, y
 
 
 if __name__ == "__main__":
-    model, scaler, X = load_predict_data()
+    model, X = load_predict_data()
     for premium in range(50):
-        expected_income, expected_semesters_paid, expected_sales, y = predict_data(premium, model, scaler, X)
+        expected_income, expected_semesters_paid, expected_sales, y = predict_data(premium, model, X)
         print(premium, expected_income, expected_semesters_paid, expected_sales)
 
 
