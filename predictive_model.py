@@ -10,7 +10,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout
 
 # Features to use
-features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'TenureYears', 'Socieconomic Status',
+features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'Tenure', 'Socieconomic Status',
             'Price Sensitivity', 'Right Address', 'PhoneType','Premium Offered', 'Estimated number of cars',
             'Living Area (m^2)', 'Number of Fixed Lines', 'yearBuilt', 'Credit', 'Probability of Second Residence']
 
@@ -78,7 +78,7 @@ def proccess_X(db1):
 
     # Province
     var = 'Province'
-    dummies = pd.get_dummies(db1[var], dummy_na=True)
+    dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
     X = pd.concat([X, dummies], axis=1)
 
     # TenureYears
@@ -103,12 +103,12 @@ def proccess_X(db1):
     # 'Right Address'
     var = 'Right Address'
     db1.loc[pd.isnull(db1[var]), var] = 'Wrong'
-    dummies = pd.get_dummies(db1[var], dummy_na=True)
+    dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
     X = pd.concat([X, dummies], axis=1)
 
     # 'PhoneType'
     var = 'PhoneType'
-    dummies = pd.get_dummies(db1[var], dummy_na=True)
+    dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
     X = pd.concat([X, dummies], axis=1)
 
     # 'Premium Offered'

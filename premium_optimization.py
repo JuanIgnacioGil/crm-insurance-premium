@@ -4,13 +4,16 @@
 import pandas as pd
 import pickle
 from keras.models import model_from_json
-from predictive_model import proccess_X
+from predictive_model import proccess_X, features
 
-def predict(premium, db2=None):
+
+def predict(premium, db2=None, db1=None):
     """Predicts sales for a specified output
 
     Args:
         premium (float) : premium offered
+        db1 (pandas.DataFrame) : train data
+            If it's not provided, the function will read from 'Database.xlsx'
         db2 (pandas.DataFrame) : data
             If it's not provided, the function will read from 'Database.xlsx'
     Returns:
@@ -20,16 +23,21 @@ def predict(premium, db2=None):
         y (np.array) : Array with individual sales (0, 1) for each customer
     """
 
-    if db2 is None:
+    if (db2 is None) | (db1 is None):
         # Read data
         xls = pd.ExcelFile('Database.xlsx')
+        db1 = xls.parse(1)
         db2 = xls.parse(2)
 
     # Fill the premium column
     db2['Premium Offered'] = premium
 
+    # To get all columns in X, we need to mix it with the training data
+    db3 = pd.concat([db2[features], db1[features]], axis=0)
+
     # Generate an X matrix
-    X = proccess_X(db2)
+    Xall = proccess_X(db3)
+    X = Xall[:db2.shape[0], :]
 
     # Read the model
     data = pickle.load(open('ml_data.dat', 'rb'))
