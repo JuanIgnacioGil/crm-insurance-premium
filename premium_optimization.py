@@ -1,47 +1,28 @@
 # -*- coding: utf-8 -*-
 """Premium optimization"""
 
-import pandas as pd
+import numpy as np
 import pickle
 from keras.models import model_from_json
-from predictive_model import proccess_X, features
 
 
-def predict(premium, db2=None, db1=None):
+def load_predict_data():
     """Predicts sales for a specified output
 
     Args:
         premium (float) : premium offered
-        db1 (pandas.DataFrame) : train data
-            If it's not provided, the function will read from 'Database.xlsx'
-        db2 (pandas.DataFrame) : data
-            If it's not provided, the function will read from 'Database.xlsx'
+
     Returns:
-        expected_income (float) : Expected income per customer
-        expected_semesters_paid (float) : Expected number of semesters paid
-        expected_sales (float) : Expected sales probability
-        y (np.array) : Array with individual sales (0, 1) for each customer
+       model (keras.model): predictor model
+       scaler (sklearn.preprocessing.StandardScaler) : Scaler to transform variables
+       X (numpy.matrix) : X matrix
     """
-
-    if (db2 is None) | (db1 is None):
-        # Read data
-        xls = pd.ExcelFile('Database.xlsx')
-        db1 = xls.parse(1)
-        db2 = xls.parse(2)
-
-    # Fill the premium column
-    db2['Premium Offered'] = premium
-
-    # To get all columns in X, we need to mix it with the training data
-    db3 = pd.concat([db2[features], db1[features]], axis=0)
-
-    # Generate an X matrix
-    Xall = proccess_X(db3)
-    X = Xall[:db2.shape[0], :]
 
     # Read the model
     data = pickle.load(open('ml_data.dat', 'rb'))
     scaler = data['scaler']
+    X = data['X1']
+
     # load json and create model
     json_file = open('model.json', 'r')
     loaded_model_json = json_file.read()
@@ -50,22 +31,46 @@ def predict(premium, db2=None, db1=None):
     # load weights into new model
     model.load_weights('model.h5')
 
+    return model, scaler, X
+
+
+def predict_data(premium, model, scaler, X):
+    """Predicts sales for a specified output
+
+    Args:
+        premium (float) : premium offered
+        model (keras.model): predictor model
+        scaler (sklearn.preprocessing.StandardScaler) : Scaler to transform variables
+        X (numpy.matrix) : X matrix
+
+    Returns:
+        expected_income (float) : Expected income per customer
+        expected_semesters_paid (float) : Expected number of semesters paid
+        expected_sales (float) : Expected sales probability
+        y (np.array) : Array with individual sales (0, 1) for each customer
+    """
+    # Fill the premium column
+    X[:, 0] = premium
+
+    # Fill the pricePremium column
+    X[:, 2] = np.exp(-X[:, 0] * X[:, 1])
+
     # Predict X data
     Xnorm = scaler.transform(X)
     y = model.predict(Xnorm)
+
     expected_semesters_paid = y.mean()
-    expected_sales = y[y > 0.5].count() / y.count()
+    expected_sales = sum(y > 0.5) / len(y)
     expected_income = premium * expected_semesters_paid
 
-    return expected_income, expected_semesters_paid, expected_sales, y
+    return expected_income, expected_semesters_paid, expected_sales[0], y
 
 
 if __name__ == "__main__":
-    premium = 12
-    expected_income, expected_sales, y = predict(premium)
-    print(expected_income, expected_sales)
-
-
+    model, scaler, X = load_predict_data()
+    for premium in range(50):
+        expected_income, expected_semesters_paid, expected_sales, y = predict_data(premium, model, scaler, X)
+        print(premium, expected_income, expected_semesters_paid, expected_sales)
 
 
 

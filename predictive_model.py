@@ -7,7 +7,8 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout
+from keras.layers import Dense, Activation, Dropout, LeakyReLU
+from keras.regularizers import l1, l2
 
 # Features to use
 features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'Tenure', 'Socieconomic Status',
@@ -41,8 +42,22 @@ def prepare_data():
     # Train and test sets
     X_train, X_test, y_train, y_test = train_test_split(Xnorm, y, test_size=0.15, random_state=42)
 
+    #db2
+    db2 = xls.parse(2)
+
+    # Fill the premium column
+    db2['Premium Offered'] = db1['Premium Offered'].mean()
+
+    # To get all columns in X, we need to mix it with the training data
+    db3 = pd.concat([db2[features], db1[features]], axis=0)
+
+    # Generate an X matrix
+    Xall = proccess_X(db3)
+    X2 = Xall[:db2.shape[0], :]
+
     # Pickle the data
-    data = {'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test, 'scaler': scaler}
+    data = {'X1': X, 'X_train': X_train, 'X_test': X_test, 'y_train': y_train, 'y_test': y_test,
+            'scaler': scaler, 'X2': X2}
     pickle.dump(data, open('ml_data.dat', 'wb'))
 
     return X_train, X_test, y_train, y_test, scaler
@@ -59,6 +74,18 @@ def proccess_X(db1):
     """
 
     X = pd.DataFrame()
+
+    # 'Premium Offered'
+    var = 'Premium Offered'
+    X[var] = db1[var].copy()
+
+    # 'Price Sensitivity'
+    var = 'Price Sensitivity'
+    db1.loc[np.isnan(db1[var]), var] = 12
+    X[var] = db1[var].copy()
+
+    var = 'PricePremium'
+    X[var] = np.exp(-db1['Price Sensitivity'].copy() * db1['Premium Offered'].copy())
 
     # ProdActive
     var = 'ProdActive'
@@ -95,11 +122,6 @@ def proccess_X(db1):
     db1.loc[db1[var] == 'Very High', var] = 4
     X[var] = db1[var].copy()
 
-    # 'Price Sensitivity'
-    var = 'Price Sensitivity'
-    db1.loc[np.isnan(db1[var]), var] = 7
-    X[var] = db1[var].copy()
-
     # 'Right Address'
     var = 'Right Address'
     db1.loc[pd.isnull(db1[var]), var] = 'Wrong'
@@ -110,10 +132,6 @@ def proccess_X(db1):
     var = 'PhoneType'
     dummies = pd.get_dummies(db1[var], dummy_na=True, prefix=var)
     X = pd.concat([X, dummies], axis=1)
-
-    # 'Premium Offered'
-    var = 'Premium Offered'
-    X[var] = db1[var].copy()
 
     # 'Estimated number of cars'
     var = 'Estimated number of cars'
@@ -182,17 +200,15 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_test = data['y_test']
 
     model = Sequential()
-    model.add(Dense(32, activation='relu', input_dim=55))
-    model.add(Dropout(0.5))
-    model.add(Dense(16, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(8, activation='relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(1, activation='relu'))
+    model.add(Dense(32, activation='relu', input_dim=56, use_bias=False, kernel_regularizer=l2(0.01)))
+    model.add(Dense(16, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
+    model.add(Dense(8, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
+    model.add(Dense(4, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
+    model.add(Dense(1, activation='relu', use_bias=False, kernel_regularizer=l2(0.01)))
     model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['mae'])
 
     # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
-    model.fit(X_train, y_train, epochs=100, batch_size=128, validation_split=0.15, verbose=1)
+    model.fit(X_train, y_train, epochs=50, batch_size=128, validation_split=0.15, verbose=1)
 
     # Test on the test set
     test_accuracy = model.test_on_batch(X_test, y_test, sample_weight=None)
