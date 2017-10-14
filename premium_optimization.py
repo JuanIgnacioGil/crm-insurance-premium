@@ -20,7 +20,7 @@ def load_predict_data():
     """
 
     # Read the model
-    data = pickle.load(open('ml_data.dat', 'rb'))
+    data = pickle.load(open('rf_data.dat', 'rb'))
     X = data['X1']
 
     model = joblib.load('random_forest.pkl')
@@ -48,11 +48,11 @@ def predict_data(premium, model, X):
 
     # Predict X data
     y = model.predict(X)
-    y[y < 0] = 0
 
-    expected_semesters_paid = y.mean()
-    expected_sales = sum(y > 0.5) / len(y)
-    expected_income = premium * expected_semesters_paid
+    expected_income = y.mean()
+    semesters_paid = y / premium
+    expected_semesters_paid =  semesters_paid.mean()
+    expected_sales = sum(semesters_paid > 0.5) / len(semesters_paid)
 
     return expected_income, expected_semesters_paid, expected_sales, y
 

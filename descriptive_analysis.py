@@ -29,7 +29,7 @@ def analyze_feature(var, db1, categorical=False, continous=False):
     """
 
     title = var
-    sales_average = db1['Number of Semesters Paid'].mean()
+    sales_average = db1['TotalSales'].mean()
 
     # If the data is continous, cut it in buckets
     if continous:
@@ -45,16 +45,16 @@ def analyze_feature(var, db1, categorical=False, continous=False):
         chi, pval = chi2_floating(var, db1)
 
     # Bar plot
-    g = db1[['Number of Semesters Paid', var]].groupby(var)
+    g = db1[['TotalSales', var]].groupby(var)
     data = pd.concat([g.mean(), g.std(), 100 * g.count() / g.count().sum()], axis=1)
 
-    data.columns = ['Number of Semesters Paid', 'standard error', 'Percentage of clients']
+    data.columns = ['TotalSales', 'standard error', 'Percentage of clients']
 
     dp = [
         # Chart
         go.Bar(
             x=data.index,
-            y=data['Number of Semesters Paid'],
+            y=data['TotalSales'],
             text=['{:.0f}% of clients'.format(x) for x in data['Percentage of clients']],
             name='Sales probability',
             error_y=dict(
@@ -74,7 +74,7 @@ def analyze_feature(var, db1, categorical=False, continous=False):
     layout = go.Layout(
         barmode='group',
         title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(title, chi, pval),
-        yaxis=dict(title='Number of Semesters Paid', range=[0, 5]),
+        yaxis=dict(title='TotalSales', range=[0, 5]),
         xaxis=dict(title=title),
     )
 
@@ -98,7 +98,7 @@ def chi2_floating(var, db1):
     """
 
     ley = LabelEncoder()
-    y = ley.fit_transform(db1['Number of Semesters Paid'])
+    y = ley.fit_transform(db1['TotalSales'])
 
     c, pval = chi2(db1[var].as_matrix().reshape(-1, 1), y)
 
@@ -123,7 +123,7 @@ def chi2_categorical(var, db1):
     X = leX.fit_transform(db1[var]).reshape(-1, 1)
 
     ley = LabelEncoder()
-    y = ley.fit_transform(db1['Number of Semesters Paid'])
+    y = ley.fit_transform(db1['TotalSales'])
 
     c, pval = chi2(X, y)
 
