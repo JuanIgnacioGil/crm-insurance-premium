@@ -74,8 +74,10 @@ def analyze_feature(var, db1, categorical=False, continous=False):
     layout = go.Layout(
         barmode='group',
         title='{} (chi square:{:.0f}, p-value:{:.3f})'.format(title, chi, pval),
-        yaxis=dict(title='TotalSales', range=[0, 1]),
+        yaxis=dict(title='Sales probability', range=[0, 1]),
         xaxis=dict(title=title),
+        paper_bgcolor='rgb(241,239,232)',
+        plot_bgcolor='rgb(241,239,232)'
     )
 
     fig = go.Figure(data=dp, layout=layout)

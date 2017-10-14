@@ -19,7 +19,7 @@ def load_predict_data():
 
     # Read the model
     data = pickle.load(open('rf_data.dat', 'rb'))
-    X = data['X1']
+    X = data['X2']
 
     model = joblib.load('random_forest.pkl')
 

@@ -24,7 +24,7 @@ def load_predict_data():
     # Read the nn model
     data = pickle.load(open('nn_data.dat', 'rb'))
     scaler = data['scaler']
-    Xnn = data['X1']
+    Xnn = data['X2']
 
     # load json and create model
     json_file = open('nn_model.json', 'r')
@@ -36,7 +36,7 @@ def load_predict_data():
 
     # Read the rf model
     data = pickle.load(open('rf_data.dat', 'rb'))
-    Xrf = data['X1']
+    Xrf = data['X2']
     rf = joblib.load('random_forest.pkl')
 
     return nn, rf, scaler, Xnn, Xrf
