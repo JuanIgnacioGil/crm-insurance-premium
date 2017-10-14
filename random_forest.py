@@ -16,8 +16,8 @@ not_features = ['Obs', 'Sales', 'CodeCategory', 'Product Type', 'Number of Semes
 
 selected_features = ['ProdBought', 'NumberofCampaigns', 'ProdActive', 'Email', 'Birthdate',
        'Premium Offered', 'Province', 'Tenure', 'Living Area (m^2)',
-       'yearBuilt', 'House Price', 'House Insurance', 'Pension Plan', 'Income',
-       'Credit', 'Socieconomic Status', 'Price Sensitivity']
+       'yearBuilt', 'Pension Plan', 'House Insurance', 'House Price', 'Credit',
+       'Income', 'Socieconomic Status', 'Price Sensitivity']
 
 
 def prepare_data(features=None):
@@ -237,13 +237,13 @@ def proccess_X(db, features):
     # ADSL
     var = 'ADSL'
     if var in features:
-        db1.loc[pd.isnull(db1[var]), var] = db1[var].median()
+        db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
         X[var] = db1[var].copy()
 
     # '3G Devices'
     var = '3G Devices'
     if var in features:
-        db1.loc[pd.isnull(db1[var]), var] = db1[var].median()
+        db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
         X[var] = db1[var].copy()
 
     ## 'Type of House'

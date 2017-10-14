@@ -238,13 +238,13 @@ def proccess_X(db, features):
     # ADSL
     var = 'ADSL'
     if var in features:
-        db1.loc[pd.isnull(db1[var]), var] = db1[var].median()
+        db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
         X[var] = db1[var].copy()
 
     # '3G Devices'
     var = '3G Devices'
     if var in features:
-        db1.loc[pd.isnull(db1[var]), var] = db1[var].median()
+        db1.loc[pd.isnull(db1[var]), var] = db1[var].mean()
         X[var] = db1[var].copy()
 
     ## 'Type of House'
@@ -284,19 +284,19 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_test = data['y_test']
 
     model = Sequential()
-    model.add(Dense(32, activation='linear', input_dim=52))
+    model.add(Dense(32, activation='linear', use_bias=False, input_dim=52))
     model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(16, activation='linear'))
+    model.add(Dense(16, activation='linear', use_bias=False))
     model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(8, activation='linear'))
+    model.add(Dense(8, activation='linear', use_bias=False))
     model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(4, activation='linear'))
+    model.add(Dense(4, activation='linear', use_bias=False))
     model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='sigmoid'))
+    model.add(Dense(1, activation='sigmoid', use_bias=False))
     model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['binary_accuracy'])
 
     # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.

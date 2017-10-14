@@ -78,7 +78,3 @@ if __name__ == "__main__":
     for premium in np.arange(11, 22, 0.5):
         expected_sales, expected_income, y = predict_data(premium, model, scaler, X, select_best=5000)
         print(premium, expected_income, expected_sales)
-
-
-
-
