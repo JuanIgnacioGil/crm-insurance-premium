@@ -34,7 +34,7 @@ def load_predict_data():
     return model, scaler, X
 
 
-def predict_data(premium, model, scaler, X):
+def predict_data(premium, model, scaler, X, select_best=0):
     """Predicts sales for a specified output
 
     Args:
@@ -42,6 +42,7 @@ def predict_data(premium, model, scaler, X):
         model (keras.model): predictor model
         scaler (sklearn.preprocessing.StandardScaler) : Scaler to transform variables
         X (numpy.matrix) : X matrix
+        select_best (int) : if an integer > 0, select the best clients
 
     Returns:
         expected_income (float) : Expected income per customer
@@ -55,21 +56,28 @@ def predict_data(premium, model, scaler, X):
     # Predict X data
     Xnorm = scaler.transform(X)
     y = model.predict(Xnorm)
+    y = np.array([c[0] for c in y])
 
-    expected_income = y.mean()
-    semesters_paid = y / premium
-    expected_semesters_paid = semesters_paid.mean()
-    expected_sales = sum(semesters_paid > 0.5) / len(semesters_paid)
+    if select_best > 0:
+        y = np.sort(y)
+        y = y[-select_best:]
 
-    return expected_income, expected_semesters_paid, expected_sales, y
+    expected_sales = y.mean()
+    expected_income = expected_sales * premium
 
+    return expected_sales, expected_income, y
 
 if __name__ == "__main__":
     model, scaler, X = load_predict_data()
-    for premium in range(50):
-        expected_income, expected_semesters_paid, expected_sales, y = predict_data(premium, model, scaler, X)
-        print(premium, expected_income, expected_semesters_paid, expected_sales)
+    print('Random clients')
+    for premium in np.arange(11, 22, 0.5):
+        expected_sales, expected_income, y = predict_data(premium, model, scaler, X)
+        print(premium, expected_income, expected_sales)
 
+    print('Select 5000 best clients')
+    for premium in np.arange(11, 22, 0.5):
+        expected_sales, expected_income, y = predict_data(premium, model, scaler, X, select_best=5000)
+        print(premium, expected_income, expected_sales)
 
 
 

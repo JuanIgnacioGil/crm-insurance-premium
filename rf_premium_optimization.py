@@ -4,7 +4,6 @@
 import numpy as np
 import pickle
 from sklearn.externals import joblib
-from keras.models import model_from_json
 
 
 def load_predict_data():
@@ -14,8 +13,7 @@ def load_predict_data():
         premium (float) : premium offered
 
     Returns:
-       model (keras.model): predictor model
-       scaler (sklearn.preprocessing.StandardScaler) : Scaler to transform variables
+       model (sklearn.ensemble.RandomForestRegressor): predictor model
        X (numpy.matrix) : X matrix
     """
 
@@ -28,7 +26,7 @@ def load_predict_data():
     return model, X
 
 
-def predict_data(premium, model, X):
+def predict_data(premium, model, X, select_best=0):
     """Predicts sales for a specified output
 
     Args:
@@ -36,6 +34,7 @@ def predict_data(premium, model, X):
         model (keras.model): predictor model
         scaler (sklearn.preprocessing.StandardScaler) : Scaler to transform variables
         X (numpy.matrix) : X matrix
+        select_best (int) : if an integer > 0, select the best clients
 
     Returns:
         expected_income (float) : Expected income per customer
@@ -49,19 +48,27 @@ def predict_data(premium, model, X):
     # Predict X data
     y = model.predict(X)
 
-    expected_income = y.mean()
-    semesters_paid = y / premium
-    expected_semesters_paid =  semesters_paid.mean()
-    expected_sales = sum(semesters_paid > 0.5) / len(semesters_paid)
+    if select_best > 0:
+        y = np.sort(y)
+        y = y[-select_best:]
 
-    return expected_income, expected_semesters_paid, expected_sales, y
+    expected_sales = y.mean()
+    expected_income = expected_sales * premium
+
+    return expected_sales, expected_income, y
 
 
 if __name__ == "__main__":
     model, X = load_predict_data()
-    for premium in range(11, 23):
-        expected_income, expected_semesters_paid, expected_sales, y = predict_data(premium, model, X)
-        print(premium, expected_income, expected_semesters_paid, expected_sales)
+    print('Random clients')
+    for premium in np.arange(11, 22, 0.5):
+        expected_sales, expected_income, y = predict_data(premium, model, X)
+        print(premium, expected_income, expected_sales)
+
+    print('Select 5000 best clients')
+    for premium in np.arange(11, 22, 0.5):
+        expected_sales, expected_income, y = predict_data(premium, model, X, select_best=5000)
+        print(premium, expected_income, expected_sales)
 
 
 

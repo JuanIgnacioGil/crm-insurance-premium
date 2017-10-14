@@ -7,10 +7,9 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout, LeakyReLU
-from keras.regularizers import l1, l2
+from keras.layers import Dense, Dropout, LeakyReLU
 
-from random_forest import selected_features
+from random_forest import selected_features, not_features
 
 # Features to use
 features = ['ProdActive', 'ProdBought', 'NumberofCampaigns', 'Email', 'Province', 'Tenure', 'Socieconomic Status',
@@ -36,8 +35,8 @@ def prepare_data(features=None):
     db1 = xls.parse(1)
     db2 = xls.parse(2)
 
-    db1.loc[np.isnan(db1['Number of Semesters Paid']), 'Number of Semesters Paid'] = 0
-    y = (db1['Number of Semesters Paid'] * db1['Premium Offered']).as_matrix()
+    db1.loc[np.isnan(db1['Sales']), 'Sales'] = 0
+    y = (db1['Sales']).as_matrix()
 
     # Fill the premium column in db2
     db2['Premium Offered'] = db1['Premium Offered'].mean()
@@ -285,22 +284,28 @@ def neural_network(X_train=None, X_test=None, y_train=None, y_test=None, file=No
         y_test = data['y_test']
 
     model = Sequential()
-    model.add(Dense(16, activation='relu', input_dim=54))
+    model.add(Dense(32, activation='linear', input_dim=52))
+    model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(8, activation='relu'))
+    model.add(Dense(16, activation='linear'))
+    model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(4, activation='relu'))
+    model.add(Dense(8, activation='linear'))
+    model.add(LeakyReLU())
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='relu'))
-    model.compile(loss='mean_squared_error', optimizer='Adam', metrics=['mae'])
+    model.add(Dense(4, activation='linear'))
+    model.add(LeakyReLU())
+    model.add(Dropout(0.5))
+    model.add(Dense(1, activation='sigmoid'))
+    model.compile(loss='binary_crossentropy', optimizer='Adam', metrics=['binary_accuracy'])
 
     # x_train and y_train are Numpy arrays --just like in the Scikit-Learn API.
-    model.fit(X_train, y_train, epochs=100, batch_size=128, validation_split=0.15, verbose=1)
+    model.fit(X_train, y_train, epochs=200, batch_size=128, validation_split=0.15, verbose=1)
 
     # Test on the test set
     test_accuracy = model.test_on_batch(X_test, y_test, sample_weight=None)
-    print('Test mean squared error: {:.3f}'.format(test_accuracy[0]))
-    print('Test mean absolute arror: {:.3f}'.format(test_accuracy[1]))
+    print('Test crossentropy: {:.3f}'.format(test_accuracy[0]))
+    print('Test accuracy: {:.3f}'.format(test_accuracy[1]))
 
     # Save model
     # serialize model to JSON

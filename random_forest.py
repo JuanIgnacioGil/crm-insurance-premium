@@ -5,7 +5,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.externals import joblib
 
@@ -14,11 +14,10 @@ from sklearn.externals import joblib
 not_features = ['Obs', 'Sales', 'CodeCategory', 'Product Type', 'Number of Semesters Paid',
                 'Phone Call Day', 'TotalSales']
 
-selected_features = ['ProdActive', 'NumberofCampaigns', 'Birthdate', 'ProdBought',
-       'Province', 'Living Area (m^2)', 'Tenure', 'yearBuilt',
-       'Premium Offered', 'Pension Plan', 'House Price', 'Income', 'Email',
-       'Credit', 'House Insurance', 'Socieconomic Status', 'Savings',
-       'Right Address', 'Price Sensitivity']
+selected_features = ['ProdBought', 'NumberofCampaigns', 'ProdActive', 'Email', 'Birthdate',
+       'Premium Offered', 'Province', 'Tenure', 'Living Area (m^2)',
+       'yearBuilt', 'House Price', 'House Insurance', 'Pension Plan', 'Income',
+       'Credit', 'Socieconomic Status', 'Price Sensitivity']
 
 
 def prepare_data(features=None):
@@ -39,8 +38,8 @@ def prepare_data(features=None):
     db1 = xls.parse(1)
     db2 = xls.parse(2)
 
-    db1.loc[np.isnan(db1['Number of Semesters Paid']), 'Number of Semesters Paid'] = 0
-    y = (db1['Number of Semesters Paid'] * db1['Premium Offered']).as_matrix()
+    db1.loc[np.isnan(db1['Sales']), 'Sales'] = 0
+    y = (db1['Sales']).as_matrix()
 
     # Fill the premium column in db2
     db2['Premium Offered'] = db1['Premium Offered'].mean()
@@ -283,7 +282,7 @@ def random_forest(X_train=None, X_test=None, y_train=None, y_test=None, file=Non
         y_train = data['y_train']
         y_test = data['y_test']
 
-    model = RandomForestRegressor(n_estimators=500)
+    model = RandomForestClassifier(n_estimators=500)
 
     print("Training...")
     # Your model is trained on the training_data
